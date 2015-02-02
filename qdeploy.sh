@@ -1,23 +1,46 @@
 #!/bin/bash
 
 
-n1=$@
+n1=($@)
+n1pool=()
 n2=()
+log_file=".deploy_output"
 
 qdeploy | grep "show this help message and exit" > /dev/null
-if [ $? != 0 ]; then
+while [ $? != 0 ]; do
     qdeploy
-    exit 1
-fi
+    sleep 1
+    qdeploy | grep "show this help message and exit" > /dev/null
+done
 
-
+reArrange()
+{
+    all=()
+    all=("${n1[@]}" "${n1pool[@]}")
+    n1=()
+    n1pool=()
+    if [ ${#all[@]} > 10 ]; then
+        n1=(${all[@]:0:10})
+        n1pool=(${all[@]:10})
+    else
+        n1=(${all[@]})
+        n1pool=()
+    fi
+}
 
 while true; do
-    echo deploy: ${n1[@]}
-    qdeploy ${n1[@]} > deploy_output
-    for n in `cat deploy_output|grep -E "Deploy successful"|cut -d "|" -f 2|cut -d ] -f 1`; do
-	echo $n, successful
-	n2+=($n)
+    reArrange;
+    echo len: ${#n1[@]} list: ${n1[@]}
+    echo remain: ${n1pool[@]}
+    qdeploy ${n1[@]} | tee $log_file
+# should code 1 exit?
+    if [ $? == 130 ]; then
+        echo receive ctrl+c, exit code 130;
+        exit 130;
+    fi
+    for n in `cat $log_file|grep -E "Deploy successful"| cut -d "|" -f 2|cut -d ] -f 1`; do
+        echo $n, successful
+        n2+=($n)
     done;
     ntmp=()
     echo success: ${n2[@]}
@@ -34,9 +57,9 @@ while true; do
     done;
     echo fail: ${ntmp[@]}
     if [ ${#ntmp[@]} != 0 ]; then
-	n1=${ntmp[@]};
+        n1=(${ntmp[@]});
 	n2=();
-	continue;
+        continue;
     fi
     echo "success!"
     break
