@@ -56,7 +56,7 @@ while true; do
         fi
     done;
     echo fail: ${ntmp[@]}
-    if [ ${#ntmp[@]} != 0 ]; then
+    if [ ${#ntmp[@]} != 0 ] || [ ${#n1pool[@]} != 0 ]; then
         n1=(${ntmp[@]});
 	n2=();
         continue;
